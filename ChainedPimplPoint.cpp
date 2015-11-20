@@ -1,7 +1,7 @@
 #include "ChainedPimplPoint.h"
 
 class ChainedPimplPoint::Implementation
-		: protected Chained::Implementation<ChainedPimplPoint>
+		: protected chained::Implementation<ChainedPimplPoint>
 {
 public:
 	Implementation(double x, double y)
@@ -24,12 +24,12 @@ ChainedPimplPoint::~ChainedPimplPoint()
 
 ChainedPimplPoint* ChainedPimplPoint::create(double x, double y)
 {
-	return chained_create<Interface>(x, y);
+	return chained::create<Interface>(x, y);
 }
 
-std::shared_ptr<ChainedPimplPoint> ChainedPimplPoint::createShared(double x, double y)
+std::shared_ptr<ChainedPimplPoint> ChainedPimplPoint::make_shared(double x, double y)
 {
-	return chained_createShared<Interface>(x, y);
+	return chained::make_shared<Interface>(x, y);
 }
 
 double ChainedPimplPoint::x() const
@@ -42,8 +42,8 @@ double ChainedPimplPoint::y() const
 	return p(this)->y;
 }
 
-size_t ChainedPimplPoint::ImplementationSize()
+size_t ChainedPimplPoint::implementation_size()
 {
-	return chained_size<Interface>();
+	return chained::implementation_size<Interface>();
 }
 

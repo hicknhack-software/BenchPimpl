@@ -1,46 +1,46 @@
 #include "ChainedPimplRect.h"
 
 class ChainedPimplRect::Implementation
-		: protected Chained::Implementation<ChainedPimplRect>
+		: protected chained::Implementation<ChainedPimplRect>
 {
 public:
 	Implementation(double w, double h)
 		: w(w)
 		, h(h)
 	{}
-	
-	double sum() const 
+
+	double sum() const
 	{
-		return w + h + i().x() + i().y();
+		return w + h + i()->x() + i()->y();
 	}
-	
-    double w, h;
+
+	double w, h;
 };
 
 ChainedPimplRect::ChainedPimplRect(double x, double y, double w, double h)
 	: ChainedPimplPoint(x, y)
 {
-	new (p(this)) Implementation(w, h);	
+	new (p(this)) Implementation(w, h);
 }
 
 ChainedPimplRect::~ChainedPimplRect()
 {
-	p(this)->~Implementation();		
+	p(this)->~Implementation();
 }
 
 ChainedPimplRect* ChainedPimplRect::create(double x, double y, double w, double h)
 {
-	return chained_create<Interface>(x, y, w, h);
+	return chained::create<Interface>(x, y, w, h);
 }
 
-std::shared_ptr<ChainedPimplRect> ChainedPimplRect::createShared(double x, double y, double w, double h)
+std::shared_ptr<ChainedPimplRect> ChainedPimplRect::make_shared(double x, double y, double w, double h)
 {
-	return chained_createShared<Interface>(x, y, w, h);
+	return chained::make_shared<Interface>(x, y, w, h);
 }
 
 double ChainedPimplRect::width() const
 {
-	return p(this)->w;	
+	return p(this)->w;
 }
 
 double ChainedPimplRect::height() const
@@ -53,7 +53,7 @@ double ChainedPimplRect::sum() const
 	return p(this)->sum();
 }
 
-size_t ChainedPimplRect::ImplementationSize()
+size_t ChainedPimplRect::implementation_size()
 {
-	return chained_size<Interface>();
+	return chained::implementation_size<Interface>() + ChainedPimplPoint::implementation_size();
 }

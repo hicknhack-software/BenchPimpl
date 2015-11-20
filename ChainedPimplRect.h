@@ -1,10 +1,11 @@
 #pragma once
 #include "ChainedPimplPoint.h"
 
-class ChainedPimplRect : public ChainedPimplPoint
+class ChainedPimplRect
+		: public ChainedPimplPoint
 {
 	typedef ChainedPimplRect Interface;
-	friend class ChainedPimpl::Base<ChainedPimplPoint, ChainedPimpl::VirtualBase>;
+	friend class chained;
 	class Implementation;
 
 protected:
@@ -15,12 +16,12 @@ public:
 
 public:
 	static ChainedPimplRect* create(double x, double y, double w, double h);
-	static std::shared_ptr<ChainedPimplRect> createShared(double x, double y, double w, double h);
+	static std::shared_ptr<ChainedPimplRect> make_shared(double x, double y, double w, double h);
 
 	double width() const;
 	double height() const;
 	double sum() const;
 
 protected:
-	static size_t ImplementationSize();
+	static size_t implementation_size();
 };

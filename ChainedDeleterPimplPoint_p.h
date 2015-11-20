@@ -2,10 +2,10 @@
 #include "ChainedDeleterPimplPoint.h"
 
 class ChainedDeleterPimplPoint::Implementation
-		: protected Chained::Implementation<Interface>
+		: protected chained::Implementation<Interface>
 {
 public:
 	Implementation(double x, double y);
-	
-    double x, y;
+
+	double x, y;
 };

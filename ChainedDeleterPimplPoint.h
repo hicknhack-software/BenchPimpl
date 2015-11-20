@@ -2,13 +2,13 @@
 #include "ChainedPimplBase.h"
 
 class ChainedDeleterPimplPoint
-		: public ChainedPimpl::Base<ChainedDeleterPimplPoint>
+		: protected ChainedPimpl::Base<ChainedDeleterPimplPoint>
 {
 	typedef ChainedDeleterPimplPoint Interface;
-	friend class ChainedPimpl::Base<ChainedDeleterPimplPoint>;
+	friend class chained;
 public:
 	static ChainedDeleterPimplPoint* create(double x, double y);
-	static std::shared_ptr<ChainedDeleterPimplPoint> createShared(double x, double y);
+	static std::shared_ptr<ChainedDeleterPimplPoint> make_shared(double x, double y);
 
 protected:
 	class Implementation;
@@ -22,6 +22,6 @@ public:
 	double y() const;
 
 protected:
-	static size_t ImplementationSize();
-	void deleteImplementation();
+	static size_t implementation_size();
+	void destruct_implementation();
 };

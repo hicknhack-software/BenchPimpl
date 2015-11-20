@@ -7,24 +7,24 @@ ChainedDeleterPimplRect::Implementation::Implementation(double x, double y, doub
 	, h(h)
 {}
 
-double ChainedDeleterPimplRect::Implementation::sum() const 
+double ChainedDeleterPimplRect::Implementation::sum() const
 {
 	return w + h + x + y;
 }
 
 ChainedDeleterPimplRect* ChainedDeleterPimplRect::create(double x, double y, double w, double h)
 {
-	return chained_create<Interface>(x, y, w, h);
+	return chained::create<Interface>(x, y, w, h);
 }
 
-std::shared_ptr<ChainedDeleterPimplRect> ChainedDeleterPimplRect::createShared(double x, double y, double w, double h)
+std::shared_ptr<ChainedDeleterPimplRect> ChainedDeleterPimplRect::make_shared(double x, double y, double w, double h)
 {
-	return chained_createShared<Interface>(x, y, w, h);
+	return chained::make_shared<Interface>(x, y, w, h);
 }
 
 double ChainedDeleterPimplRect::width() const
 {
-	return p(this)->w;	
+	return p(this)->w;
 }
 
 double ChainedDeleterPimplRect::height() const
@@ -42,15 +42,15 @@ ChainedDeleterPimplRect::ChainedDeleterPimplRect()
 
 ChainedDeleterPimplRect::ChainedDeleterPimplRect(double x, double y, double w, double h)
 {
-	new (p(this)) Implementation(x, y, w, h);	
+	new (p(this)) Implementation(x, y, w, h);
 }
 
-size_t ChainedDeleterPimplRect::ImplementationSize()
+size_t ChainedDeleterPimplRect::implementation_size()
 {
-	return chained_size<Interface>();
+	return chained::implementation_size<Interface>();
 }
 
-void ChainedDeleterPimplRect::deleteImplementation()
+void ChainedDeleterPimplRect::destruct_implementation()
 {
-	chained_deleteImplementation(this);	
+	chained::destruct_implementation(this);
 }

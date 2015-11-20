@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <memory>
+#include <cassert>
 
 namespace ChainedPimpl
 {
@@ -10,17 +11,17 @@ class VirtualBase
 {
 protected:
 	virtual ~VirtualBase() {}
-	virtual void deleteImplementation() {}
-	size_t sizeOfImplementation();
+	virtual void destruct_implementation() {}
+	size_t implementation_size();
 };
 
 template<typename Tag>
-class EmptyBase
+class PlainBase
 {
 protected:
-	~EmptyBase() {}
-	void deleteImplementation() {}
-	size_t sizeOfImplementation();
+	~PlainBase() {}
+	void destruct_implementation() {}
+	size_t implementation_size();
 };
 
 /*
@@ -38,172 +39,201 @@ protected:
  * * feels like a pointer
  * * implementations cannot derive (only one destructor is allowed)
  */
-template<typename Tag, template<typename> class BaseClass = EmptyBase>
+template<typename Tag, template<typename> class BaseClass = PlainBase>
 class Base : protected BaseClass<Tag>
 {
 protected:
-	typedef Base<Tag, BaseClass> Chained;
+	typedef Base<Tag, BaseClass> ChainedBase;
 
-	template<typename Interface>
-	struct Implementation
-	{
-		Interface& i()
-		{
-			auto ptr = reinterpret_cast<uint8_t*>(this);
-			auto offset = chained_getImplementationOffset<Interface>();
-			return *reinterpret_cast<Interface*>(ptr - offset);
-		}
-
-		const Interface& i() const
-		{
-			return const_cast<Implementation*>(this)->i();
-		}
-	};
-
-private:
-	template<typename Interface>
-	struct ChainedDeleter
-	{
-		void operator()(Interface* interface)
-		{
-			interface->deleteImplementation();
-			interface->~Interface();
-		}
-	};
-
-protected:
 	~Base() {}
 
-	template <typename Interface>
-	static void chained_deleteImplementation(Interface* interface)
+	class chained
 	{
-		typedef typename Interface::Implementation Implementation;
-		p(interface)->~Implementation();
-	}
+		template<typename Interface>
+		struct Trait
+		{
+			typedef typename Interface::Implementation Implementation;
 
-	template <typename Interface, typename Base>
-	static void chained_deleteImplementation(Interface* interface, Base* base)
-	{
-		typedef typename Interface::Implementation Implementation;
-		p(interface)->~Implementation();
-		base->deleteImplementation();
-	}
+			static size_t implementation_offset()
+			{
+				auto allImplementationSizes = Interface::implementation_size();
+				auto myImplementationSize = sizeof(Implementation);
+				return sizeof(Interface) + allImplementationSizes - myImplementationSize;
+			}
 
-	template <typename Interface, typename... Args>
-	static Interface* chained_create(Args&&... args)
-	{
-		return new (chained_allocate<Interface>()) Interface(std::forward<Args>(args)...);
-	}
+			static Interface* interface(void* implementation_ptr)
+			{
+				auto ptr = reinterpret_cast<uint8_t*>(implementation_ptr);
+				return reinterpret_cast<Interface*>(ptr - implementation_offset());
+			}
 
-	// Interface has to be the same as for chained_create
-	template <typename Interface>
-	static void chained_free(Interface* interface)
-	{
-		interface->deleteImplementation();
-		interface->~Interface();
-		auto ptr = reinterpret_cast<uint8_t*>(interface);
-		delete[] ptr;
-	}
+			static Implementation* implementation(Interface* interface)
+			{
+				auto ptr = reinterpret_cast<uint8_t*>(interface);
+				return reinterpret_cast<Implementation*>(ptr + implementation_offset());
+			}
 
-	template <typename Interface, typename... Args>
-	static std::unique_ptr<Interface, ChainedDeleter<Interface> > chained_createUnique(Args&&... args)
-	{
-		return new (chained_allocate<Interface>()) Interface(std::forward<Args>(args)...);
-	}
+			static void destruct_implementation(Interface* interface)
+			{
+				p(interface)->~Implementation();
+			}
+			struct Wrapper : public Interface
+			{
+				template<typename... Args>
+				Wrapper(Args&&... args)
+					: Interface(std::forward<Args>(args)...)
+				{}
 
-	template <typename Interface, typename... Args>
-	static std::shared_ptr<Interface> chained_createShared(Args&&... args)
-	{
-		auto alloc = ChainedAllocator<Interface>();
-		return std::allocate_shared< ChainedWrapper<Interface> >(alloc, std::forward<Args>(args)...);
-	}
+				~Wrapper()
+				{
+					Interface::destruct_implementation();
+				}
+			};
 
-	template <typename Interface>
-	static size_t chained_size()
-	{
-		typedef typename Interface::Implementation Implementation;
-		return sizeof(Implementation);
-	}
+			static void destruct(Interface* interface)
+			{
+				interface->destruct_implementation();
+				interface->~Interface();
+			}
+			struct Deleter
+			{
+				void operator()(Interface* interface)
+				{
+					destruct(interface);
+				}
+			};
+			typedef std::unique_ptr<Interface, Deleter> unique_ptr;
+
+			typedef std::shared_ptr<Interface> shared_ptr;
+
+			template <typename... Args>
+			static shared_ptr make_shared(Args&&... args)
+			{
+				auto alloc = Allocator<Interface>();
+				return std::allocate_shared<Wrapper>(alloc, std::forward<Args>(args)...);
+			}
+
+			template<typename T = Interface>
+			static uint8_t* allocate()
+			{
+				auto size = sizeof(T) + Interface::implementation_size();
+				return new uint8_t[size];
+			}
+
+			template<typename T>
+			static void deallocate(T* p)
+			{
+				uint8_t* ptr = reinterpret_cast<uint8_t*>(p);
+				delete[] ptr;
+			}
+
+			template <typename T>
+			struct Allocator : public std::allocator<T>
+			{
+				Allocator() {}
+
+				template<typename Other>
+				Allocator(const Other&) {}
+
+				typename std::allocator<T>::pointer allocate(std::size_t n)
+				{
+					assert(n == 1);
+					auto ptr = Trait::allocate<T>();
+					return reinterpret_cast<T*>(ptr);
+				}
+				void deallocate(typename std::allocator<T>::pointer p, std::size_t n)
+				{
+					assert(n == 1);
+					Trait::deallocate(p);
+				}
+
+				template <typename U>
+				struct rebind {
+					typedef Allocator<U> other;
+				};
+			};
+		};
+
+	public:
+		template<typename Interface>
+		struct Implementation
+		{
+			Interface* i()
+			{
+				return Trait<Interface>::interface(this);
+			}
+
+			const Interface* i() const
+			{
+				return const_cast<Implementation*>(this)->i();
+			}
+		};
+
+		template <typename Interface>
+		static typename Interface::Implementation* p(Interface* interface)
+		{
+			return Trait<Interface>::implementation(interface);
+		}
+
+		template <typename Interface>
+		static void destruct_implementation(Interface* interface)
+		{
+			Trait<Interface>::destruct_implementation(interface);
+		}
+
+		template <typename Interface, typename Base>
+		static void destruct_implementation(Interface* interface, Base* base)
+		{
+			Trait<Interface>::destruct_implementation(interface);
+			base->destruct_implementation();
+		}
+
+		template <typename Interface, typename... Args>
+		static Interface* create(Args&&... args)
+		{
+			return new (Trait<Interface>::allocate()) Interface(std::forward<Args>(args)...);
+		}
+
+		// Interface has to be the same as for chained_create
+		template <typename Interface>
+		static void free(Interface* interface)
+		{
+			Trait<Interface>::destruct(interface);
+			Trait<Interface>::deallocate(interface);
+		}
+
+		template <typename Interface, typename... Args>
+		static typename Trait<Interface>::unique_ptr make_unique(Args&&... args)
+		{
+			return create<Interface>(std::forward<Args>(args)...);
+		}
+
+		template <typename Interface, typename... Args>
+		static std::shared_ptr<Interface> make_shared(Args&&... args)
+		{
+			return Trait<Interface>::make_shared(std::forward<Args>(args)...);
+		}
+
+		template <typename Interface>
+		static size_t implementation_size()
+		{
+			return sizeof(typename Interface::Implementation);
+		}
+	};
 
 	// helper to access the implementation for the interface
 	// use:
 	//	p(this)->doSth();
 	template <typename Interface>
-	static typename Interface::Implementation* p(Interface* interface)
+	static auto p(Interface* interface) -> decltype(chained::p(interface))
 	{
-		typedef typename Interface::Implementation Implementation;
-		auto ptr = reinterpret_cast<uint8_t*>(interface);
-		auto offset = chained_getImplementationOffset<Interface>();
-		return reinterpret_cast<Implementation*>(ptr + offset);
+		return chained::p(interface);
 	}
 
 	template <typename Interface>
-	static const typename Interface::Implementation* p(const Interface* interface)
+	static auto p(const Interface* interface) -> const decltype(chained::p(interface))
 	{
 		return p(const_cast<Interface*>(interface));
-	}
-
-private:
-	template<typename Interface>
-	struct ChainedWrapper : public Interface
-	{
-		template<typename... Args>
-		ChainedWrapper(Args&&... args)
-			: Interface(std::forward<Args>(args)...)
-		{}
-
-		~ChainedWrapper()
-		{
-			Interface::deleteImplementation();
-		}
-	};
-
-	/*
-	 * helper to allocate shared pointers
-	 */
-	template <typename Interface, typename BaseInterface = Interface>
-	struct ChainedAllocator : public std::allocator< Interface >
-	{
-		typedef std::allocator< Interface > Base;
-
-		ChainedAllocator() {}
-
-		template<typename Other>
-		ChainedAllocator(const Other&) {}
-
-		Interface* allocate(std::size_t n)
-		{
-			auto size = n * (sizeof(Interface) + BaseInterface::ImplementationSize());
-			auto ptr = new uint8_t[size];
-			return reinterpret_cast<Interface*>(ptr);
-		}
-		void deallocate(Interface* p, std::size_t)
-		{
-			uint8_t* ptr = reinterpret_cast<uint8_t*>(p);
-			delete[] ptr;
-		}
-
-		template <typename U>
-		struct rebind {
-			typedef ChainedAllocator<U, BaseInterface> other;
-		};
-	};
-
-	// helper to allocate the right amount of bytes
-	template <typename Interface>
-	static uint8_t* chained_allocate()
-	{
-		auto size = sizeof(Interface) + Interface::ImplementationSize();
-		return new uint8_t[size];
-	}
-
-	template <typename Interface>
-	static size_t chained_getImplementationOffset()
-	{
-		typedef typename Interface::Implementation Implementation;
-		auto allImplementationSizes = Interface::ImplementationSize();
-		auto myImplementationSize = sizeof(Implementation);
-		return sizeof(Interface) + allImplementationSizes - myImplementationSize;
 	}
 };
 

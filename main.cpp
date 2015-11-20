@@ -89,7 +89,7 @@ void SharedChainedPimpl(benchmark::State& state)
 {
 	while (state.KeepRunning())
 	{
-		auto rect = ChainedPimplRect::createShared(1, 2, 3, 4);
+		auto rect = ChainedPimplRect::make_shared(1, 2, 3, 4);
 		auto sum = rect->sum();
 		doNotOptimize(sum);
 	}

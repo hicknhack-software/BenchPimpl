@@ -2,10 +2,10 @@
 #include "ChainedPimplBase.h"
 
 class ChainedPimplPoint
-		: public ChainedPimpl::Base<ChainedPimplPoint, ChainedPimpl::VirtualBase>
+		: protected ChainedPimpl::Base<ChainedPimplPoint>
 {
 	typedef ChainedPimplPoint Interface;
-	friend class ChainedPimpl::Base<ChainedPimplPoint, ChainedPimpl::VirtualBase>;
+	friend class chained;
 	class Implementation;
 
 protected:
@@ -16,11 +16,11 @@ public:
 
 public:
 	static ChainedPimplPoint* create(double x, double y);
-	static std::shared_ptr<ChainedPimplPoint> createShared(double x, double y);
+	static std::shared_ptr<ChainedPimplPoint> make_shared(double x, double y);
 
 	double x() const;
 	double y() const;
 
 protected:
-	static size_t ImplementationSize();
+	static size_t implementation_size();
 };
