@@ -1,45 +1,42 @@
 #include "ChainedDeleterPimplPoint.h"
 #include "ChainedDeleterPimplPoint_p.h"
 
-ChainedDeleterPimplPoint::Implementation::Implementation(double x, double y)
-	: x(x)
-	, y(y)
-{}
-
-ChainedDeleterPimplPoint* ChainedDeleterPimplPoint::create(double x, double y)
-{
-	return chained::create<Interface>(x, y);
+ChainedDeleterPimplPoint::Implementation::Implementation(double x, double y) : x(x), y(y) {
 }
 
-std::shared_ptr<ChainedDeleterPimplPoint> ChainedDeleterPimplPoint::make_shared(double x, double y)
-{
-	return chained::make_shared<Interface>(x, y);
+ChainedDeleterPimplPoint*
+ChainedDeleterPimplPoint::create(double x, double y) {
+  return chained::create<Interface>(x, y);
 }
 
-double ChainedDeleterPimplPoint::x() const
-{
-	return p(this)->x;
+std::shared_ptr<ChainedDeleterPimplPoint>
+ChainedDeleterPimplPoint::make_shared(double x, double y) {
+  return chained::make_shared<Interface>(x, y);
 }
 
-double ChainedDeleterPimplPoint::y() const
-{
-	return p(this)->y;
+double
+ChainedDeleterPimplPoint::x() const {
+  return p(this)->x;
 }
 
-ChainedDeleterPimplPoint::ChainedDeleterPimplPoint()
-{}
-
-ChainedDeleterPimplPoint::ChainedDeleterPimplPoint(double x, double y)
-{
-	new (p(this)) Implementation(x, y);
+double
+ChainedDeleterPimplPoint::y() const {
+  return p(this)->y;
 }
 
-size_t ChainedDeleterPimplPoint::implementation_size()
-{
-	return chained::implementation_size<Interface>();
+ChainedDeleterPimplPoint::ChainedDeleterPimplPoint() {
 }
 
-void ChainedDeleterPimplPoint::destruct_implementation()
-{
-	chained::destruct_implementation(this);
+ChainedDeleterPimplPoint::ChainedDeleterPimplPoint(double x, double y) {
+  new (p(this)) Implementation(x, y);
+}
+
+size_t
+ChainedDeleterPimplPoint::implementation_size() {
+  return chained::implementation_size<Interface>();
+}
+
+void
+ChainedDeleterPimplPoint::destruct_implementation() {
+  chained::destruct_implementation(this);
 }

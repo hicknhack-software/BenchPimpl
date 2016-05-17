@@ -1,27 +1,26 @@
 #pragma once
 #include "ChainedPimplBase.h"
 
-class ChainedDeleterPimplPoint
-		: protected ChainedPimpl::Base<ChainedDeleterPimplPoint>
-{
-	typedef ChainedDeleterPimplPoint Interface;
-	friend class chained;
+class ChainedDeleterPimplPoint : protected ChainedPimpl::Base<ChainedDeleterPimplPoint> {
+  typedef ChainedDeleterPimplPoint Interface;
+  friend class chained;
+
 public:
-	static ChainedDeleterPimplPoint* create(double x, double y);
-	static std::shared_ptr<ChainedDeleterPimplPoint> make_shared(double x, double y);
+  static ChainedDeleterPimplPoint* create(double x, double y);
+  static std::shared_ptr<ChainedDeleterPimplPoint> make_shared(double x, double y);
 
 protected:
-	class Implementation;
-	ChainedDeleterPimplPoint();
+  class Implementation;
+  ChainedDeleterPimplPoint();
+
 private:
-	ChainedDeleterPimplPoint(double x, double y);
-public:
-	~ChainedDeleterPimplPoint() {}
+  ChainedDeleterPimplPoint(double x, double y);
 
-	double x() const;
-	double y() const;
+public:
+  double x() const;
+  double y() const;
 
 protected:
-	static size_t implementation_size();
-	void destruct_implementation();
+  static size_t implementation_size();
+  void destruct_implementation();
 };

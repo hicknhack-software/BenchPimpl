@@ -1,11 +1,9 @@
 #pragma once
 #include "ChainedDeleterPimplPoint.h"
 
-class ChainedDeleterPimplPoint::Implementation
-		: protected chained::Implementation<Interface>
-{
+class ChainedDeleterPimplPoint::Implementation : protected chained::Implementation<Interface> {
 public:
-	Implementation(double x, double y);
+  Implementation(double x, double y);
 
-	double x, y;
+  double x, y;
 };
